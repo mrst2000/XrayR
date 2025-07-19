@@ -11,6 +11,7 @@ jobs:
       GOOS: linux
       GOARCH: amd64
       CGO_ENABLED: 0
+
     steps:
       - name: Checkout codebase
         uses: actions/checkout@v3
@@ -34,12 +35,15 @@ jobs:
           LIST=('geoip geoip geoip' 'domain-list-community dlc geosite')
           for i in "${LIST[@]}"
           do
-            INFO=($(echo $i | awk 'BEGIN{FS=" ";OFS=" "} {print $1,$2,$3}'))
+            INFO=($(echo $i | awk '{print $1,$2,$3}'))
             DOWNLOAD_URL="https://raw.githubusercontent.com/v2fly/${INFO[0]}/release/${INFO[1]}.dat"
             FILE_NAME="${INFO[2]}.dat"
-            curl -L "${DOWNLOAD_URL}" -o ./build_assets/${FILE_NAME}
+            echo "Downloading $DOWNLOAD_URL"
+            curl -L "${DOWNLOAD_URL}" -o "./build_assets/${FILE_NAME}"
             HASH="$(curl -sL "${DOWNLOAD_URL}.sha256sum" | awk '{print $1}')"
-            [ "$(sha256sum ./build_assets/${FILE_NAME} | awk '{print $1}')" == "${HASH}" ] || exit 1
+            echo "Verifying $FILE_NAME"
+            ACTUAL_HASH="$(sha256sum "./build_assets/${FILE_NAME}" | awk '{print $1}')"
+            [ "$ACTUAL_HASH" = "$HASH" ] || { echo "Hash mismatch for $FILE_NAME"; exit 1; }
           done
 
       - name: Create ZIP archive
